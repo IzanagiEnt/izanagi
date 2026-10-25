@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Розовый квиз</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: одна центральная карточка на тёмно-розовом градиенте, прогресс сверху, ответы столбиком, анимация поверх страницы */
+:root {
+  --plum-950: #1a0512;
+  --plum-800: #430a2e;
+  --rose-700: #96155a;
+  --rose-400: #ec5b95;
+  --blush: #ffc2d9;
+  --ink: #fff1f6;
+  --ink-soft: #e8b3c9;
+  --good: #7be6b4;
+  --warn: #ffb86b;
+  --glass: rgba(255, 255, 255, 0.07);
+  --glass-line: rgba(255, 194, 217, 0.26);
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body { min-height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink);
+  background-color: var(--plum-950);
+  background-image:
+    radial-gradient(60rem 40rem at 85% 100%, rgba(236, 91, 149, 0.38), transparent 70%),
+    linear-gradient(160deg, var(--plum-950) 0%, var(--plum-800) 42%, var(--rose-700) 100%);
+  background-attachment: fixed;
+  padding-block: 32px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+.wrap {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+  display: grid;
+  gap: 24px;
+}
+
+.top {
+  display: grid;
+  gap: 12px;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.meta strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.bar > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blush), var(--rose-400));
+  transition: width 0.5s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+.card {
+  border: 1px solid var(--glass-line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  border-radius: 24px;
+  padding: clamp(20px, 5vw, 36px);
+  display: grid;
+  gap: 24px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+}
+
+.tag {
+  justify-self: start;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--blush);
+  border: 1px dashed var(--glass-line);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(22px, 5.4vw, 32px);
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.answers {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.ans {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass);
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, opacity 0.2s ease;
+}
+
+.ans .k {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--blush);
+  background: rgba(255, 255, 255, 0.09);
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.ans .t { overflow-wrap: anywhere; }
+
+.ans:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: var(--blush);
+}
+
+.ans:hover:not(:disabled) .k { background: var(--rose-400); color: #fff; }
+
+.ans:focus-visible,
+.next:focus-visible,
+.ghost:focus-visible,
+.inbox-btn:focus-visible,
+.again:focus-visible {
+  outline: 3px solid var(--blush);
+  outline-offset: 3px;
+}
+
+.ans:disabled { cursor: default; }
+.ans:disabled:not(.picked):not(.right) { opacity: 0.45; }
+
+.ans.picked {
+  border-color: var(--blush);
+  background: rgba(255, 194, 217, 0.18);
+}
+.ans.picked .k { background: var(--rose-400); color: #fff; }
+
+.ans.right {
+  border-color: var(--good);
+  background: rgba(123, 230, 180, 0.14);
+}
+.ans.right .k { background: var(--good); color: #0e2a1e; }
+
+.ans.wrong {
+  border-color: var(--warn);
+  background: rgba(255, 184, 107, 0.12);
+  animation: shake 0.45s ease;
+}
+.ans.wrong .k { background: var(--warn); color: #33200a; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(3px); }
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+}
+
+.fb {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink-soft);
+  min-width: 0;
+}
+.fb.good { color: var(--good); }
+.fb.bad { color: var(--warn); }
+
+.next, .again {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  flex: none;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  padding: 15px 24px;
+  border-radius: 999px;
+  color: #3a0a26;
+  background: linear-gradient(135deg, #ffd6e6, var(--rose-400));
+  box-shadow: 0 10px 24px -10px rgba(236, 91, 149, 0.9);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.next:hover, .again:hover { transform: translateY(-2px); }
+
+.result {
+  text-align: center;
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  padding-block: 8px;
+}
+.result .big {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(48px, 16vw, 88px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(135deg, #fff, var(--blush) 40%, var(--rose-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.result p { margin: 0; color: var(--ink-soft); max-width: 40ch; }
+
+.field {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.field::placeholder { color: var(--ink-soft); opacity: 0.8; font-weight: 400; }
+.field:focus-visible { outline: 3px solid var(--blush); outline-offset: 2px; border-color: var(--blush); }
+.field:disabled { opacity: 0.7; }
+
+.next:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
+
+.ans.dodging {
+  position: fixed;
+  z-index: 15;
+  margin: 0;
+  animation: none;
+  background: var(--plum-800);
+  transition: left 0.22s cubic-bezier(0.3, 0.8, 0.3, 1), top 0.22s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+.art { justify-self: center; width: min(200px, 62%); }
+.art svg { width: 100%; height: auto; overflow: visible; display: block; }
+.art .body { fill: var(--blush); }
+.art .inner { fill: var(--rose-400); }
+.art .eye { fill: var(--plum-950); transform-box: fill-box; transform-origin: center; animation: blink 3.6s ease-in-out infinite; }
+.art .cheek { fill: var(--rose-400); opacity: 0.6; }
+.art .mouth { fill: none; stroke: var(--plum-950); stroke-width: 3.5; stroke-linecap: round; }
+.art .arm { fill: none; stroke: var(--blush); stroke-width: 11; stroke-linecap: round; }
+.art .arm.wave { transform-box: fill-box; transform-origin: 10% 100%; animation: wave 1.1s ease-in-out infinite; }
+.art .blob { transform-box: fill-box; transform-origin: 50% 100%; animation: bob 1.8s ease-in-out infinite; }
+.art .shadow { fill: rgba(0, 0, 0, 0.28); transform-box: fill-box; transform-origin: center; animation: shade 1.8s ease-in-out infinite; }
+.art .fh { opacity: 0.9; transform-box: fill-box; transform-origin: center; animation: floatup 3s ease-in infinite; }
+
+@keyframes bob { 0%, 100% { transform: translateY(0) scale(1.03, 0.97); } 50% { transform: translateY(-10px) scale(0.98, 1.03); } }
+@keyframes shade { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.8); opacity: 0.6; } }
+@keyframes blink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.1); } }
+@keyframes wave { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-22deg); } }
+@keyframes floatup {
+  0% { opacity: 0; transform: translateY(14px) scale(0.6); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-40px) scale(1.15); }
+}
+
+.note { margin: 0; text-align: center; font-size: 13px; color: var(--ink-soft); }
+
+.ghost {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  flex: none;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line);
+  color: var(--ink);
+  background: var(--glass);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.ghost:hover { border-color: var(--blush); background: rgba(255, 255, 255, 0.13); }
+
+.inbox-btn {
+  all: unset;
+  box-sizing: border-box;
+  position: fixed;
+  z-index: 35;
+  cursor: pointer;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+  font-family: var(--font-display);
+  font-size: 12px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--plum-800);
+  border: 1px solid var(--blush);
+  color: var(--ink);
+}
+
+.inbox {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(10, 2, 8, 0.72);
+  display: grid;
+  justify-items: end;
+}
+.sheet {
+  width: min(560px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  background: linear-gradient(180deg, var(--plum-800), var(--plum-950));
+  border-left: 1px solid var(--glass-line);
+  padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-bottom, 0px));
+  padding-left: 20px;
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+#inboxList { display: grid; gap: 14px; min-width: 0; }
+.resp { border: 1px solid var(--glass-line); border-radius: 16px; padding: 16px; display: grid; gap: 14px; background: var(--glass); min-width: 0; }
+.resp-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.attempt { display: grid; gap: 8px; min-width: 0; }
+.attempt .when { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+.qa { margin: 0; overflow-wrap: anywhere; font-weight: 600; }
+.qa .qq { display: block; font-size: 13px; font-weight: 400; color: var(--ink-soft); }
+.empty { margin: 0; color: var(--ink-soft); }
+
+/* Анимированная реакция на ответ */
+#fx {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.badge {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  width: 132px;
+  height: 132px;
+  margin: -66px 0 0 -66px;
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0;
+}
+.badge.show { animation: pop 1.25s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards; }
+.badge svg { width: 100%; height: 100%; overflow: visible; }
+.badge .ring { fill: rgba(26, 5, 18, 0.72); stroke-width: 4; }
+.badge .mark { fill: none; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100; stroke-dashoffset: 100; }
+.badge.show .mark { animation: draw 0.55s 0.15s ease forwards; }
+.badge.good .ring, .badge.good .mark { stroke: var(--good); }
+.badge.bad .ring, .badge.bad .mark { stroke: var(--warn); }
+.badge.love .ring { stroke: var(--rose-400); }
+.badge .heart { fill: var(--rose-400); transform-origin: 50px 50px; }
+.badge.show .heart { animation: beat 0.6s 0.1s ease 2; }
+
+@keyframes pop {
+  0% { opacity: 0; transform: scale(0.3); }
+  25% { opacity: 1; transform: scale(1.08); }
+  40% { transform: scale(1); }
+  80% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9) translateY(-14px); }
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.22); } }
+
+.ans, .card { animation: rise 0.45s ease both; }
+.ans:nth-child(2) { animation-delay: 0.05s; }
+.ans:nth-child(3) { animation-delay: 0.1s; }
+.ans:nth-child(4) { animation-delay: 0.15s; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important; }
+  #fx { display: none; }
+  .art * { animation: none !important; }
+}
+
+@media (max-width: 420px) {
+  body { font-size: 16px; padding-block: 20px 32px; }
+  .foot { flex-direction: column; align-items: stretch; text-align: center; }
+  .next { text-align: center; }
+}
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<main class="wrap">
+  <div class="top">
+    <div class="meta"><span id="count">Вопрос <strong>1</strong> из 3</span><span id="score" hidden></span></div>
+    <div class="bar" role="progressbar" aria-label="Прогресс" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="fill"></i></div>
+  </div>
+  <section class="card" id="card" aria-live="polite"></section>
+  <p class="note" id="note" hidden></p>
+</main>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="badge" id="badge" aria-hidden="true"></div>
+
+<script>
+/* ВОПРОСЫ.
+   type: "text" даёт поле для своего ответа вместо вариантов.
+   a: варианты ответа (до 4). dodge: номер варианта (с нуля), который убегает от нажатия.
+   correct: номер верного ответа; если верных нет, поле не нужно. */
+const QUESTIONS = [
+  { q: "Кем ты видишь меня в будущем?", type: "text", placeholder: "Напиши свой ответ", art: "cute" },
+  { q: "Хочешь ли ты, чтобы я скинул тебе денег?", a: ["Да", "Нет"], dodge: 1 },
+  { q: "Найдётся ли для меня время?", a: ["Конечно", "Да", "Нет", "Даже не знаю"] },
+  { q: "Что бы было, если бы я резко пропал?", type: "text" },
+  { q: "Что бы ты хотела больше всего от меня?", type: "text" },
+  { q: "Что ты ждёшь от меня как от человека в общем?", type: "text" },
+  { q: "Ты красивая?", a: ["Да", "Естественно", "Я самая лучшая", "Без сомнений"] }
+];
+
+const LETTERS = ["А", "Б", "В", "Г"];
+const $ = (id) => document.getElementById(id);
+const card = $("card");
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const hasKey = QUESTIONS.some((x) => typeof x.correct === "number");
+
+let i = 0, score = 0, locked = false;
+
+function setProgress(done) {
+  const pct = Math.round((done / QUESTIONS.length) * 100);
+  $("fill").style.width = pct + "%";
+  document.querySelector(".bar").setAttribute("aria-valuenow", String(pct));
+}
+
+/* Милый анимированный персонаж: подпрыгивает, моргает, машет и пускает сердечки */
+function makeArt() {
+  const d = document.createElement("div");
+  d.className = "art";
+  d.setAttribute("aria-hidden", "true");
+  d.innerHTML =
+    '<svg viewBox="0 0 200 160">' +
+    '<symbol id="hrt" viewBox="0 0 20 20"><path d="M10 18C2 12 0 7 3.5 4.5C6 2.8 9 4 10 6.5C11 4 14 2.8 16.5 4.5C20 7 18 12 10 18Z"/></symbol>' +
+    '<use class="fh" href="#hrt" x="26" y="52" width="18" height="18" style="fill:var(--rose-400);animation-delay:0s"/>' +
+    '<use class="fh" href="#hrt" x="158" y="46" width="22" height="22" style="fill:var(--blush);animation-delay:1s"/>' +
+    '<use class="fh" href="#hrt" x="92" y="8" width="16" height="16" style="fill:var(--rose-400);animation-delay:2s"/>' +
+    '<ellipse class="shadow" cx="100" cy="150" rx="40" ry="6"/>' +
+    '<g class="blob">' +
+    '<circle cx="68" cy="52" r="15" class="body"/><circle cx="132" cy="52" r="15" class="body"/>' +
+    '<circle cx="68" cy="53" r="8" class="inner"/><circle cx="132" cy="53" r="8" class="inner"/>' +
+    '<circle cx="100" cy="98" r="50" class="body"/>' +
+    '<path class="arm" d="M56 112Q40 104 38 88" />' +
+    '<path class="arm wave" d="M144 112Q160 104 162 88" />' +
+    '<ellipse class="eye" cx="84" cy="94" rx="5" ry="7"/><ellipse class="eye" cx="116" cy="94" rx="5" ry="7"/>' +
+    '<ellipse class="cheek" cx="70" cy="108" rx="9" ry="5.5"/><ellipse class="cheek" cx="130" cy="108" rx="9" ry="5.5"/>' +
+    '<path class="mouth" d="M92 106Q100 116 108 106"/>' +
+    '</g></svg>';
+  return d;
+}
+
+function showQuestion() {
+  const item = QUESTIONS[i];
+  locked = false;
+  document.querySelectorAll("body > .ans").forEach((b) => b.remove());
+  $("count").innerHTML = "Вопрос <strong>" + (i + 1) + "</strong> из " + QUESTIONS.length;
+  if (hasKey) { $("score").hidden = false; $("score").innerHTML = "Верно: <strong>" + score + "</strong>"; }
+  setProgress(i);
+
+  card.innerHTML = "";
+  if (item.example) {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = "Пример";
+    card.appendChild(tag);
+  }
+  if (item.art) card.appendChild(makeArt());
+  const h = document.createElement("h1");
+  h.textContent = item.q;
+  card.appendChild(h);
+
+  if (item.type === "text") {
+    const area = document.createElement("textarea");
+    area.id = "txt";
+    area.className = "field";
+    area.rows = 4;
+    area.maxLength = 600;
+    area.placeholder = item.placeholder || "Напиши свой ответ";
+    area.setAttribute("aria-label", item.q);
+    card.appendChild(area);
+
+    const foot = document.createElement("div");
+    foot.className = "foot";
+    foot.innerHTML = '<p class="fb" id="fb">Напиши ответ и нажми «Отправить».</p>';
+    const send = document.createElement("button");
+    send.type = "button";
+    send.className = "next";
+    send.id = "send";
+    send.textContent = "Отправить";
+    send.disabled = true;
+    foot.appendChild(send);
+    card.appendChild(foot);
+
+    area.addEventListener("input", () => { send.disabled = area.value.trim() === ""; });
+    send.addEventListener("click", () => submitText(area, send));
+    return;
+  }
+
+  const ul = document.createElement("ul");
+  ul.className = "answers";
+  item.a.slice(0, 4).forEach((text, n) => {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ans";
+    b.id = "ans-" + n;
+    b.innerHTML = '<span class="k"></span><span class="t"></span>';
+    b.querySelector(".k").textContent = LETTERS[n];
+    b.querySelector(".t").textContent = text;
+    if (item.dodge === n) setupDodge(b, li); else b.addEventListener("click", () => choose(n));
+    li.appendChild(b);
+    ul.appendChild(li);
+  });
+  card.appendChild(ul);
+
+  const foot = document.createElement("div");
+  foot.className = "foot";
+  foot.innerHTML = '<p class="fb" id="fb">Выберите один из четырёх вариантов.</p>';
+  card.appendChild(foot);
+}
+
+function choose(n) {
+  if (locked) return;
+  locked = true;
+  const item = QUESTIONS[i];
+  const btns = [...document.querySelectorAll(".ans")];
+  btns.forEach((b) => (b.disabled = true));
+  document.querySelectorAll("body > .ans").forEach((b) => (b.hidden = true));
+  const picked = btns[n];
+  const fb = $("fb");
+  let kind = "love";
+
+  if (typeof item.correct === "number") {
+    if (n === item.correct) {
+      score++;
+      picked.classList.add("right");
+      fb.textContent = "Верно!";
+      fb.className = "fb good";
+      kind = "good";
+    } else {
+      picked.classList.add("wrong");
+      btns[item.correct].classList.add("right");
+      fb.textContent = "Не совсем. Верный ответ: " + item.a[item.correct] + ".";
+      fb.className = "fb bad";
+      kind = "bad";
+    }
+  } else {
+    picked.classList.add("picked");
+    fb.textContent = "Ответ принят.";
+  }
+
+  record(i, "choice", item.a[n]);
+  const r = picked.getBoundingClientRect();
+  burst(kind, r.left + r.width / 2, r.top + r.height / 2);
+  showBadge(kind);
+  if (hasKey) { $("score").innerHTML = "Верно: <strong>" + score + "</strong>"; }
+  setProgress(i + 1);
+
+  addNext();
+}
+
+function addNext() {
+  const next = document.createElement("button");
+  next.type = "button";
+  next.className = "next";
+  next.id = "next";
+  next.textContent = i === QUESTIONS.length - 1 ? "Результат" : "Дальше";
+  next.addEventListener("click", () => {
+    i++;
+    if (i < QUESTIONS.length) showQuestion(); else showResult();
+  });
+  document.querySelector(".foot").appendChild(next);
+  next.focus({ preventScroll: true });
+}
+
+function submitText(area, send) {
+  if (locked || area.value.trim() === "") return;
+  locked = true;
+  area.disabled = true;
+  $("fb").textContent = "Ответ принят.";
+  record(i, "text", area.value.trim());
+  const r = send.getBoundingClientRect();
+  burst("love", r.left + r.width / 2, r.top + r.height / 2);
+  showBadge("love");
+  setProgress(i + 1);
+  send.remove();
+  addNext();
+}
+
+/* Вариант, который убегает от курсора и пальца и не нажимается */
+let lastPt = { x: 0, y: 0 };
+document.addEventListener("pointermove", (e) => { lastPt = { x: e.clientX, y: e.clientY }; });
+
+function setupDodge(btn, li) {
+  const run = (e) => {
+    if (locked) return;
+    if (e && e.cancelable) e.preventDefault();
+    if (e && typeof e.clientX === "number") lastPt = { x: e.clientX, y: e.clientY };
+    runAway(btn, li);
+  };
+  ["pointerenter", "pointerdown", "touchstart", "mousedown", "click", "focus"].forEach((t) =>
+    btn.addEventListener(t, run, { passive: false }));
+}
+
+function runAway(btn, li) {
+  if (!btn.classList.contains("dodging")) {
+    const r = btn.getBoundingClientRect();
+    li.style.minHeight = r.height + "px";
+    btn.classList.add("dodging");
+    document.body.appendChild(btn);
+    btn.style.width = Math.min(r.width, 240) + "px";
+    btn.style.left = r.left + "px";
+    btn.style.top = r.top + "px";
+    void btn.offsetWidth;
+  }
+  const w = btn.offsetWidth, h = btn.offsetHeight, m = 16;
+  const maxX = Math.max(m, window.innerWidth - w - m);
+  const maxY = Math.max(m, window.innerHeight - h - m);
+  const others = [...document.querySelectorAll(".ans")]
+    .filter((b) => b !== btn)
+    .map((b) => b.getBoundingClientRect());
+  let best = { x: m, y: m }, bestScore = -Infinity;
+  for (let t = 0; t < 30; t++) {
+    const x = m + Math.random() * (maxX - m);
+    const y = m + Math.random() * (maxY - m);
+    const d = Math.hypot(x + w / 2 - lastPt.x, y + h / 2 - lastPt.y);
+    const hit = others.some((o) => x < o.right + 8 && x + w > o.left - 8 && y < o.bottom + 8 && y + h > o.top - 8);
+    const s = hit ? d - 10000 : d;
+    if (s > bestScore) { best = { x, y }; bestScore = s; }
+    if (!hit && d > 180) break;
+  }
+  btn.style.left = best.x + "px";
+  btn.style.top = best.y + "px";
+}
+
+function showResult() {
+  setProgress(QUESTIONS.length);
+  $("count").innerHTML = "Готово";
+  card.innerHTML = "";
+  const box = document.createElement("div");
+  box.className = "result";
+  if (hasKey) {
+    const total = QUESTIONS.filter((x) => typeof x.correct === "number").length;
+    const ratio = score / total;
+    const line = ratio === 1 ? "Все ответы верные." : ratio >= 0.5 ? "Хороший результат." : "Можно попробовать ещё раз.";
+    box.innerHTML = '<div class="big">' + score + " / " + total + "</div><p>" + line + "</p>";
+  } else {
+    box.innerHTML = '<div class="big">Спасибо</div><p>Спасибо за ответы.</p>';
+  }
+  const hint = mk("p", null, canSend ? "Отправляю ответы…" : NOT_SENT);
+  box.appendChild(hint);
+  queueSend(true);
+  chain.then(() => { hint.textContent = canSend ? "Ответы отправлены автору страницы." : NOT_SENT; });
+
+  const copy = mk("button", "ghost", "Скопировать ответы");
+  copy.type = "button";
+  copy.addEventListener("click", () => copyAnswers(copy, box));
+  box.appendChild(copy);
+
+  const again = document.createElement("button");
+  again.type = "button";
+  again.className = "again";
+  again.textContent = "Пройти заново";
+  again.addEventListener("click", () => {
+    i = 0; score = 0; answersLog = []; stamp = Date.now().toString(36); finalSent = false; partialCount = 0;
+    $("score").hidden = true;
+    showQuestion();
+  });
+  box.appendChild(again);
+  card.appendChild(box);
+  const r = card.getBoundingClientRect();
+  burst("good", r.left + r.width / 2, r.top + 140);
+  showBadge(hasKey && score / QUESTIONS.length < 0.5 ? "love" : "good");
+}
+
+/* Реакция в центре экрана */
+function showBadge(kind) {
+  const el = $("badge");
+  const marks = {
+    good: '<path class="mark" pathLength="100" d="M32 52 L46 66 L72 36"/>',
+    bad: '<path class="mark" pathLength="100" d="M36 36 L64 64 M64 36 L36 64"/>',
+    love: '<path class="heart" d="M50 74 C26 58 22 40 33 33 C41 28 48 33 50 39 C52 33 59 28 67 33 C78 40 74 58 50 74 Z"/>'
+  };
+  el.className = "badge " + kind;
+  el.innerHTML = '<svg viewBox="0 0 100 100"><circle class="ring" cx="50" cy="50" r="46"/>' + marks[kind] + "</svg>";
+  void el.offsetWidth;
+  el.classList.add("show");
+}
+
+/* Частицы: сердечки, искры, капли */
+const cv = $("fx");
+const ctx = cv.getContext("2d");
+let parts = [], running = false, W = 0, H = 0;
+
+function resize() {
+  const d = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * d; cv.height = H * d;
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+resize();
+window.addEventListener("resize", resize);
+
+const PALETTE = {
+  good: ["#ffc2d9", "#ff8fb8", "#ec5b95", "#7be6b4", "#ffffff"],
+  love: ["#ffc2d9", "#ff8fb8", "#ec5b95", "#ffffff"],
+  bad: ["#ffb86b", "#e8b3c9", "#96155a"]
+};
+
+function burst(kind, x, y) {
+  if (reduce) return;
+  const n = kind === "bad" ? 22 : 46;
+  for (let k = 0; k < n; k++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = kind === "bad" ? 1.5 + Math.random() * 3 : 3 + Math.random() * 7;
+    const type = kind === "bad" ? "drop" : Math.random() < 0.55 ? "heart" : "spark";
+    parts.push({
+      x, y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp - (kind === "bad" ? 0 : 3),
+      g: kind === "bad" ? 0.22 : 0.14,
+      size: type === "drop" ? 3 + Math.random() * 3 : 7 + Math.random() * 10,
+      rot: Math.random() * 6.28,
+      vr: (Math.random() - 0.5) * 0.25,
+      life: 0,
+      max: 60 + Math.random() * 50,
+      type,
+      color: PALETTE[kind][Math.floor(Math.random() * PALETTE[kind].length)]
+    });
+  }
+  if (!running) { running = true; requestAnimationFrame(tick); }
+}
+
+function drawHeart(s) {
+  ctx.beginPath();
+  ctx.moveTo(0, s * 0.45);
+  ctx.bezierCurveTo(-s * 1.1, -s * 0.3, -s * 0.5, -s * 1.1, 0, -s * 0.4);
+  ctx.bezierCurveTo(s * 0.5, -s * 1.1, s * 1.1, -s * 0.3, 0, s * 0.45);
+  ctx.fill();
+}
+function drawSpark(s) {
+  ctx.beginPath();
+  ctx.moveTo(0, -s); ctx.quadraticCurveTo(0, 0, s, 0);
+  ctx.quadraticCurveTo(0, 0, 0, s); ctx.quadraticCurveTo(0, 0, -s, 0);
+  ctx.quadraticCurveTo(0, 0, 0, -s);
+  ctx.fill();
+}
+
+function tick() {
+  ctx.clearRect(0, 0, W, H);
+  parts = parts.filter((p) => p.life < p.max && p.y < H + 40);
+  for (const p of parts) {
+    p.life++;
+    p.vy += p.g;
+    p.vx *= 0.985;
+    p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - p.life / p.max);
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+    if (p.type === "heart") drawHeart(p.size);
+    else if (p.type === "spark") drawSpark(p.size);
+    else { ctx.beginPath(); ctx.arc(0, 0, p.size, 0, 6.28); ctx.fill(); }
+    ctx.restore();
+  }
+  if (parts.length) requestAnimationFrame(tick); else { running = false; ctx.clearRect(0, 0, W, H); }
+}
+
+/* Отправка ответов автору страницы: база страницы, ответ каждого человека лежит в answers/<его id> */
+const NOT_SENT = "Ответы сами не отправились. Нажми «Скопировать ответы» и пришли их мне.";
+let answersLog = [];
+let stamp = Date.now().toString(36);
+const FORM_KEY = "e9fe3d58-93c7-405a-b6b7-5b1a3f6259b3";
+let canSend = true, finalSent = false, partialCount = 0, chain = Promise.resolve();
+
+function mk(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function setNote(mode) {
+  const n = $("note");
+  n.hidden = false;
+  n.textContent = mode === "send"
+    ? "Ответы получит автор страницы."
+    : "В конце ответы можно скопировать и отправить автору.";
+}
+
+function record(idx, kind, text) {
+  answersLog[idx] = { q: QUESTIONS[idx].q, a: text, kind };
+  queueSend(false);
+}
+
+async function sendAnswers(done, keep) {
+  const res = await fetch("https://api.web3forms.com/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify({
+      access_key: FORM_KEY,
+      subject: done ? "Квиз: все ответы" : "Квиз: частичные ответы",
+      from_name: "Квиз",
+      message: summary()
+    }),
+    keepalive: !!keep
+  });
+  const j = await res.json();
+  return !!j.success;
+}
+
+function queueSend(done) {
+  if (!done) return;
+  chain = sendAnswers(true, false)
+    .then((ok) => { canSend = ok; finalSent = ok; })
+    .catch(() => { canSend = false; });
+}
+
+/* Если человек закрыл страницу посреди квиза, отправляем то, что успел ответить */
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "hidden" || finalSent) return;
+  const n = answersLog.filter(Boolean).length;
+  if (!n || n === partialCount) return;
+  partialCount = n;
+  sendAnswers(false, true).catch(() => {});
+});
+
+function initDb() { setNote("send"); }
+
+function summary() {
+  return "Ответы на квиз\n\n" + answersLog.filter(Boolean)
+    .map((x, n) => (n + 1) + ". " + x.q + "\n" + x.a).join("\n\n");
+}
+
+async function copyAnswers(btn, box) {
+  const text = summary();
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = "Скопировано";
+    return;
+  } catch (e) { /* ниже покажем текст для ручного копирования */ }
+  let ta = $("copyBox");
+  if (!ta) {
+    ta = mk("textarea", "field");
+    ta.id = "copyBox";
+    ta.readOnly = true;
+    ta.rows = 8;
+    box.appendChild(ta);
+  }
+  ta.value = text;
+  ta.focus();
+  ta.select();
+  btn.textContent = "Выдели и скопируй текст ниже";
+}
+
+/* Клавиши 1-4 выбирают ответ */
+document.addEventListener("keydown", (e) => {
+  const n = ["1", "2", "3", "4"].indexOf(e.key);
+  if (n > -1 && n !== (QUESTIONS[i] || {}).dodge && document.getElementById("ans-" + n)) choose(n);
+});
+
+showQuestion();
+initDb();
+</script>
+</body>
+</html>
